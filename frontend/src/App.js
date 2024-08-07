@@ -24,11 +24,12 @@ function App() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/chat', {
-        message: input,
-        history: messages
-      });
-
+      // const response = await axios.post('/chat', {
+      //   message: input,
+      //   history: messages
+      
+      // });
+      const response = await axios.post('http://localhost:5000/chat', { message: input, history: messages })
       const assistantMessage = { role: 'assistant', content: response.data.response };
       setMessages(prevMessages => [...prevMessages, assistantMessage]);
     } catch (error) {

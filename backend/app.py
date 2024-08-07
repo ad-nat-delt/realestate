@@ -2,13 +2,15 @@ from flask import Flask, request, jsonify
 import os
 from openai import AzureOpenAI
 from dotenv import load_dotenv
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/chat": {"origins": "http://localhost:3000"}})
 
 load_dotenv()
 
 client = AzureOpenAI(
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"), 
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"), 
     api_key=os.getenv("AZURE_OPENAI_KEY"),  
     api_version="2023-05-15"
 )
@@ -27,23 +29,27 @@ Always be polite and professional. If you're unsure about specific property deta
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.json
-    user_message = data.get('message', '')
-    chat_history = data.get('history', [])
-
-    messages = [{"role": "system", "content": SYSTEM_MESSAGE}]
-    messages.extend(chat_history)
-    messages.append({"role": "user", "content": user_message})
-
     try:
+        data = request.json
+        user_message = data.get('message', '')
+        chat_history = data.get('history', [])
+
+        print(f"Received message: {user_message}")  # For debugging
+        print(f"Chat history length: {len(chat_history)}")  # For debugging
+
+        messages = [{"role": "system", "content": SYSTEM_MESSAGE}]
+        messages.extend(chat_history)
+        messages.append({"role": "user", "content": user_message})
+        print("222\n")
         response = client.chat.completions.create(
             model=DEPLOYMENT_NAME,
             messages=messages,
             temperature=0.7,
-            max_tokens=250  # Increased for potentially longer real estate responses
+            max_tokens=250
         )
-
+        #print("22\n")
         assistant_reply = response.choices[0].message.content
+        print(f"Assistant reply: {assistant_reply}")  # For debugging
 
         # Check for specific real estate queries that might need additional handling
         if "schedule viewing" in user_message.lower():
@@ -57,10 +63,15 @@ def chat():
         })
 
     except Exception as e:
+        print(f"Error in chat route: {str(e)}")  # For debugging
         error_message = f"An error occurred: {str(e)}"
         if "quota" in str(e).lower():
             error_message = "We're experiencing high demand. Please try again later or contact our support team."
         return jsonify({"error": error_message}), 500
 
+@app.route('/', methods=['GET'])
+def home():
+    return "Hello, this is the real estate chatbot backend!"
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
